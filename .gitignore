@@ -1,4 +1,4 @@
-# Ignore castomat's internal .git directory (if it exists)
+# Ignore castomat's internal .git directory
 castomat/.git/
 
 # Common build artifacts
@@ -12,6 +12,7 @@ castomat/.git/
 # IDE
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 *~
