@@ -1,0 +1,39 @@
+# Ignore castomat's internal .git directory (if it exists)
+castomat/.git/
+
+# Common build artifacts
+*.o
+*.so
+*.a
+*.dylib
+*.exe
+*.dll
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (for extensions)
+node_modules/
+*.log
+npm-debug.log*
+
+# Build directories
+build/
+dist/
+.cache/
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
