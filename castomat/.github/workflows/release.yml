@@ -1,0 +1,152 @@
+name: Release (tagged)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.2.3)"
+        required: false
+
+jobs:
+  build-binary:
+    runs-on: [self-hosted, Linux, X64, prod]
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      artifact: ${{ steps.meta.outputs.artifact }}
+    env:
+      BUILD_TYPE: Release
+      INSTALL_DIR: ${{ github.workspace }}/install
+
+    steps:
+      - name: Resolve tag
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag || '' }}"
+            if [[ -z "$TAG" ]]; then
+              echo "When dispatching manually, you must provide 'tag' (e.g. v1.2.3)." >&2
+              exit 1
+            fi
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          # Optional: validate tag format like v1.2.3 (allow v1 or v1.2 etc.)
+          if ! [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "Tag '$TAG' does not match expected format (e.g. v1.2.3)." >&2
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "artifact=vicinae-linux-x86_64-$TAG.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.meta.outputs.tag }}
+
+      - name: Prepare dirs
+        run: mkdir -p build install
+
+      - name: Configure CMake
+        run: |
+          cd build
+          cmake -G Ninja .. \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5  \
+            -DBUILD_TESTS=ON  \
+            -DVICINAE_PROVENANCE=binary_release \
+            -DLTO=ON \
+            -DUSE_SYSTEM_PROTOBUF=OFF \
+            -DUSE_SYSTEM_ABSEIL=OFF \
+            -DUSE_SYSTEM_CMARK_GFM=OFF \
+            -DCMAKE_PREFIX_PATH="$Qt6_DIR" \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+
+      - name: Build
+        run: |
+          cmake --build build --config ${BUILD_TYPE} --parallel $(nproc)
+
+      - name: Run Tests
+        run: make test
+
+      - name: Install
+        run: |
+          cd build
+          cmake --install . --config ${BUILD_TYPE}
+
+      - name: Package (tar install dir)
+        run: |
+          cd "${INSTALL_DIR}"
+          tar -czvf "${{ github.workspace }}/${{ steps.meta.outputs.artifact }}" .
+
+      - name: Create GitHub Release and upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.meta.outputs.artifact }}
+
+
+  build-appimage:
+    needs: build-binary
+    runs-on: [self-hosted, Linux, X64, appimage]
+    permissions:
+      contents: write
+    env:
+      BUILD_TYPE: Release
+      INSTALL_DIR: ${{ github.workspace }}/install
+      APP_DIR: ${{ github.workspace }}/appdir
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.build-binary.outputs.tag }}
+
+      - name: Prepare dirs
+        run: mkdir -p build install
+
+      - name: Configure CMake
+        run: |
+          cd build
+          cmake -G Ninja ..                           \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE}          \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5        \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"   \
+            -DVICINAE_PROVENANCE=appimage             \
+            -DLTO=ON
+
+      - name: Build
+        run: |
+          cmake --build build --config ${BUILD_TYPE} --parallel $(nproc)
+
+      - name: Install
+        run: |
+          cmake --install build
+
+      - name: Make AppImage
+        run: |
+          chmod +x ./scripts/mkappimage.sh
+          ./scripts/mkappimage.sh "${INSTALL_DIR}" "${APP_DIR}"
+
+      - name: Create GitHub Release and upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build-binary.outputs.tag }}
+          name: ${{ needs.build-binary.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            *.AppImage
+

@@ -1,0 +1,47 @@
+name: API Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.2.3)'
+        required: false
+
+jobs:
+  publish:
+    runs-on: [self-hosted, Linux, X64, prod]
+    defaults:
+      run:
+        working-directory: ./typescript/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_NAME=${{ github.event.inputs.tag }}
+          else
+            TAG_NAME=${GITHUB_REF_NAME}
+          fi
+
+          if [ -z "$TAG_NAME" ]; then
+            echo "Error: No tag specified."
+            exit 1
+          fi
+
+          npm version "$TAG_NAME" --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm install
+      - name: Compile proto files
+        run: npm run protogen
+      - name: Build package
+        run: npm run build
+      - uses: JS-DevTools/npm-publish@19c28f1ef146469e409470805ea4279d47c3d35c
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: ./typescript/api
+

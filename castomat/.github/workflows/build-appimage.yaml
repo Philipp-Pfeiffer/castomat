@@ -1,0 +1,44 @@
+name: Build AppImage
+
+on:
+  push:
+    paths:
+      - typescript
+      - vicinae
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: [self-hosted, Linux, X64, appimage]
+    env:
+      INSTALL_DIR: ${{ github.workspace }}/install
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: self-hosted-prod
+          max-size: 0
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build -G Ninja              \
+          -DCMAKE_BUILD_TYPE=Release                \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+
+      - name: Build
+        run: cmake --build build --parallel ${nproc}
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Make AppImage
+        run: |
+          chmod +x ./scripts/mkappimage.sh
+          ./scripts/mkappimage.sh "${INSTALL_DIR}" AppDir
+
