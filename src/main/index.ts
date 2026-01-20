@@ -31,6 +31,8 @@ const createWindow = async () => {
     height: 450,
     frame: false,
     show: false,
+    transparent: true,
+    backgroundColor: '#00000000',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false }
   })

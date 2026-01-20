@@ -33,10 +33,10 @@ const App = () => {
   }
 
   return (
-    <div className="bg-black h-full">
+    <div className="glass h-full rounded-xl">
       {!selectedCommand && (
         <Command filter={commandFilter} loop>
-          <div className="flex items-center gap-2 px-3 border-b border-zinc-800">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-glass">
             <CommandInput
               autoFocus
               value={commandSearch}
@@ -45,7 +45,7 @@ const App = () => {
               placeholder="Search commands..."
             />
             {currentBangName && (
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-gradient-to-r from-zinc-700 to-zinc-900 text-zinc-100 text-xs font-semibold shadow-sm border border-zinc-700">
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-white/10 text-white/87 text-xs font-medium border border-white/10 glass-hover">
                 {currentBangName}
               </span>
             )}
@@ -60,7 +60,7 @@ const App = () => {
           </CommandList>
 
           <Footer>
-            <span className="flex items-center gap-2 text-xs">
+            <span className="flex items-center gap-2 text-xs text-white/60">
               Run
               <CommandShortcut>↵</CommandShortcut>
             </span>

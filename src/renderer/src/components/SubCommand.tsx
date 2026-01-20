@@ -70,7 +70,7 @@ export const SubCommand = ({ actions, pluginName, commandName, result, inputRef 
           </span>
         </PopoverTrigger>
         <PopoverContent
-          className="border border-zinc-800 rounded-md relative z-20"
+          className="border border-glass rounded-lg relative z-20 glass shadow-glass"
           side="top"
           align="end"
           onCloseAutoFocus={handlePopoverClose}

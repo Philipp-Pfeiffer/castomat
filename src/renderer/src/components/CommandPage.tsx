@@ -123,12 +123,12 @@ export const CommandPage = ({
 
   return (
     <Command loop>
-      <div className="flex items-center border-b border-zinc-800 px-3">
-        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+      <div className="flex items-center border-b border-white/10 px-4 py-3">
+        <Search className="mr-2 h-4 w-4 shrink-0 text-white/40" />
 
         <input
           autoFocus
-          className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-11 w-full rounded-lg bg-transparent py-3 text-sm outline-hidden placeholder:text-white/40 disabled:cursor-not-allowed disabled:opacity-50"
           value={commandParam}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}
@@ -141,22 +141,22 @@ export const CommandPage = ({
         <CommandEmpty className="flex flex-col h-80 items-center justify-center">
           {isLoadingResult && (
             <div className="flex flex-col items-center">
-              <i className="ph ph-hourglass-high text-8xl text-zinc-600 animate-spin" />
-              <p className="text-2xl text-zinc-600 italic">Waiting for result...</p>
+              <i className="ph ph-hourglass-high text-8xl text-white/20 animate-spin" />
+              <p className="text-2xl text-white/40 italic">Waiting for result...</p>
             </div>
           )}
 
           {noResult && (
             <div className="flex flex-col items-center">
-              <i className="ph ph-empty text-8xl text-zinc-600" />
-              <p className="text-2xl text-zinc-600 italic">There is no result.</p>
+              <i className="ph ph-empty text-8xl text-white/20" />
+              <p className="text-2xl text-white/40 italic">There is no result.</p>
             </div>
           )}
 
           {emptyResult && (
             <div className="flex flex-col items-center">
-              <i className="ph ph-textbox text-8xl text-zinc-600" />
-              <p className="text-2xl text-zinc-600 italic">Type a command parameter.</p>
+              <i className="ph ph-textbox text-8xl text-white/20" />
+              <p className="text-2xl text-white/40 italic">Type a command parameter.</p>
             </div>
           )}
         </CommandEmpty>
@@ -167,7 +167,7 @@ export const CommandPage = ({
       <Footer>
         <div className="flex flex-row items-center">
           {actions.length > 0 && selectedValue && (
-            <span className="flex items-center gap-2 text-xs">
+            <span className="flex items-center gap-2 text-xs text-white/60">
               {actions[0].name}
               <CommandShortcut>↵</CommandShortcut>
             </span>
@@ -175,7 +175,7 @@ export const CommandPage = ({
 
           {showSubCommand && (
             <>
-              <hr className="ml-4 mr-4 border-0 border-l border-l-zinc-800 h-3" />
+              <hr className="ml-4 mr-4 border-0 border-l border-l-white/10 h-3" />
               <SubCommand
                 actions={actions}
                 pluginName={selectedCommand.plugin.name}

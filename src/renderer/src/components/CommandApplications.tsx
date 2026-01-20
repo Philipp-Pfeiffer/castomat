@@ -32,16 +32,16 @@ export const CommandApplications = ({ commandSearch }: CommandApplicationsProps)
           keywords={[application.name]}
         >
           <div className="flex flex-1 items-center justify-between">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2.5 items-center">
               <div
-                className="flex items-center justify-center h-5 w-5 rounded-sm"
+                className="flex items-center justify-center h-6 w-6 rounded-lg"
                 style={{ backgroundColor: '#059669' }}
               >
-                <i className="ph ph-app-window" />
+                <i className="ph ph-app-window text-sm" />
               </div>
               <span> {application.name}</span>
             </div>
-            <span className="text-xs text-zinc-300">Application</span>
+            <span className="text-xs text-white/40">Application</span>
           </div>
         </CommandItem>
       ))}
