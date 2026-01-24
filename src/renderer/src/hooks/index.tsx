@@ -27,7 +27,11 @@ export const useInstalledApplications = (): ApplicationT[] => {
 
   useEffect(() => {
     const getInstalledApplications = async () => {
-      if (winElectron && winElectron.listInstalledApplications) {
+      if (winElectron && winElectron.getInstalledApps) {
+        const appsFound = await winElectron.getInstalledApps()
+        setApplications(appsFound)
+      } else if (winElectron && winElectron.listInstalledApplications) {
+        // fallback to older handler
         const appsFound = await winElectron.listInstalledApplications()
         setApplications(appsFound)
       }

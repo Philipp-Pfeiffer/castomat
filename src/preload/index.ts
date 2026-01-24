@@ -22,6 +22,12 @@ if (process.contextIsolated) {
       listInstalledApplications: () => {
         return ipcRenderer.invoke('list-installed-applications')
       },
+      getInstalledApps: () => {
+        return ipcRenderer.invoke('get-installed-apps')
+      },
+      launchApp: (execLine) => {
+        return ipcRenderer.invoke('launch-app', execLine)
+      },
       openApplication: (command) => {
         return ipcRenderer.invoke('open-application', command)
       },

@@ -22,6 +22,8 @@ declare global {
       result
     ) => Promise<void>
     listInstalledApplications: () => Promise<ApplicationT[]>
+    getInstalledApps: () => Promise<ApplicationT[]>
+    launchApp: (execLine: string) => Promise<boolean>
     openApplication: (command: string) => Promise<void>
     openExternal: (url: string) => Promise<void>
     choosePluginsDir: () => Promise<string>

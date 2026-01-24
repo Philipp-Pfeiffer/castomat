@@ -2,6 +2,8 @@ import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Menu, shell, Tr
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join } from 'path'
 
+app.name = 'castomat'
+
 import icon from '../../resources/icon.png?asset'
 
 import {
@@ -28,6 +30,7 @@ import {
   getCommandCache,
   runInKitty
 } from './handlers'
+import { getInstalledApps, launchApp } from './apps'
 import { setupAutoUpdater } from './autoUpdater'
 
 let mainWindow: BrowserWindow
@@ -36,17 +39,23 @@ const gotTheLock = app.requestSingleInstanceLock()
 const createWindow = async () => {
   mainWindow = new BrowserWindow({
     width: 600,
-    height: 450,
+    height: 480,
     frame: false,
     show: false,
     transparent: true,
     backgroundColor: '#00000000',
+    resizable: false,
+    movable: false,
+    skipTaskbar: true,
+    type: process.platform === 'linux' ? 'toolbar' : undefined,
+    title: 'castomat',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false }
   })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    mainWindow.center()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -143,6 +152,14 @@ if (!gotTheLock) {
 
     ipcMain.handle('list-installed-applications', async () => {
       return listInstalledApplications()
+    })
+
+    ipcMain.handle('get-installed-apps', async () => {
+      return getInstalledApps()
+    })
+
+    ipcMain.handle('launch-app', async (_, execLine) => {
+      return launchApp(execLine)
     })
 
     ipcMain.handle('open-application', async (_, command) => {

@@ -29,47 +29,8 @@ export const BANGS: BangT[] = [
     bang: 'g',
     name: 'Google',
     url: 'https://www.google.com'
-  },
-  {
-    bang: 'gi',
-    name: 'Google Images',
-    url: 'https://www.google.com/images'
-  },
-  {
-    bang: 'gm',
-    name: 'Google Maps',
-    url: 'https://www.google.com/maps'
-  },
-  {
-    bang: 'w',
-    name: 'Wikipedia',
-    url: 'https://fr.wikipedia.org'
-  },
-  {
-    bang: 't',
-    name: 'Google Translate',
-    url: 'https://translate.google.com'
-  },
-  {
-    bang: 'am',
-    name: 'Amazon',
-    url: 'https://www.amazon.fr'
-  },
-  {
-    bang: 'gh',
-    name: 'GitHub',
-    url: 'https://github.com'
-  },
-  {
-    bang: 'd',
-    name: 'Larousse',
-    url: 'https://www.larousse.'
-  },
-  {
-    bang: 'im',
-    name: 'IMDb',
-    url: 'https://www.imdb.com'
   }
+  // removed image/maps/wikipedia/translate/amazon/github/larousse/imdb bangs per user request
 ]
 
 /**
@@ -230,122 +191,8 @@ export const SHORTCUTS: ShortcutT[] = [
     bgColor: '#4285F4',
     color: '#FFFFFF',
     getUrl: (query: string) => `https://www.google.com/search?q=${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-image-search',
-    bang: getBang('gi'),
-    label: (query: string) => (
-      <>
-        Search {query && <span className="text-zinc-400 italic">{truncateQuery(query)} </span>}
-        on Google Images
-      </>
-    ),
-    icon: 'image-square',
-    bgColor: '#4285F4',
-    color: '#FFFFFF',
-    getUrl: (query: string) =>
-      `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-google-maps',
-    bang: getBang('gm'),
-    label: (query: string) => (
-      <>
-        Search {query && <span className="text-zinc-400 italic">{truncateQuery(query)} </span>}
-        on Google Maps
-      </>
-    ),
-    icon: 'map-pin',
-    bgColor: '#4285F4',
-    color: '#FFFFFF',
-    getUrl: (query: string) => `https://www.google.com/maps/search/${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-wikipedia',
-    bang: getBang('w'),
-    label: (query: string) => (
-      <>
-        Search {query && <span className="text-zinc-400 italic">{truncateQuery(query)} </span>}
-        on Wikipedia
-      </>
-    ),
-    icon: 'books',
-    bgColor: '#000000',
-    color: '#FFFFFF',
-    getUrl: (query: string) =>
-      `https://fr.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-translate',
-    bang: getBang('t'),
-    label: (query: string) => (
-      <>
-        Translate {query && <span className="text-zinc-400 italic">{truncateQuery(query)} </span>}
-        on Google Translate
-      </>
-    ),
-    icon: 'translate',
-    bgColor: '#4285F4',
-    color: '#FFFFFF',
-    getUrl: (query: string) => `https://translate.google.com/?text=${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-amazon',
-    bang: getBang('am'),
-    label: (query: string) => (
-      <>
-        Search {query && <span className="text-zinc-400 italic">{truncateQuery(query)} </span>}
-        on Amazon
-      </>
-    ),
-    icon: 'basket',
-    bgColor: '#FF9900',
-    color: '#000000',
-    getUrl: (query: string) => `https://www.amazon.fr/s?k=${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-github',
-    bang: getBang('gh'),
-    label: (query: string) => (
-      <>
-        Search {query && <span className="text-zinc-400 italic">{truncateQuery(query)} </span>}
-        on GitHub
-      </>
-    ),
-    icon: 'github-logo',
-    bgColor: '#24292e',
-    color: '#FFFFFF',
-    getUrl: (query: string) => `https://github.com/search?q=${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-dictionary',
-    bang: getBang('d'),
-    label: (query: string) => (
-      <>
-        Define {query && <span className="text-zinc-400 italic">{truncateQuery(query)} </span>}
-        in Larousse
-      </>
-    ),
-    icon: 'chat-teardrop-text',
-    bgColor: '#293368',
-    color: '#FFFFFF',
-    getUrl: (query: string) =>
-      `https://www.larousse.fr/dictionnaires/francais/${encodeURIComponent(query)}`
-  },
-  {
-    name: 'sc-imdb',
-    bang: getBang('im'),
-    label: (query: string) => (
-      <>
-        Find {query && <span className="text-zinc-400 italic">{truncateQuery(query)}</span>}
-        {query ? ' on IMDb' : 'movies/TV shows on IMDb'}
-      </>
-    ),
-    icon: 'popcorn',
-    bgColor: '#F5C518',
-    color: '#000000',
-    getUrl: (query: string) => `https://www.imdb.com/find?q=${encodeURIComponent(query)}`
   }
+  // removed image/maps/wikipedia/translate/amazon/github/larousse/imdb shortcuts per user request
 ]
 
 /**
