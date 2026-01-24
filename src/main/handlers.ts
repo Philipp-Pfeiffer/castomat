@@ -168,6 +168,11 @@ export const listInstalledApplications = async (): Promise<Application[]> => {
  * @returns promise resolved when the application is opened
  */
 export const openApplication = async (command: string) => {
+  if (typeof command !== 'string' || !command.trim()) {
+    console.warn('openApplication called with invalid command:', command)
+    return null
+  }
+
   return exec(command, (error) => {
     if (error) console.error(`Error opening application: ${error.message}`)
   })
@@ -295,7 +300,19 @@ export const getPluginsDir = (): Promise<string> => {
   return new Promise((resolve) => {
     storage.get('pluginsDir', (error, data) => {
       if (error) throw error
-      resolve(data as string)
+      // storage may return a string or an object; normalize to string
+      if (!data) return resolve('')
+      if (typeof data === 'string') return resolve(data)
+      // sometimes storage returns { path: '/some/path' } or similar
+      if (typeof data === 'object') {
+        // find string value inside object
+        const stringValue = Object.values(data).find((v) => typeof v === 'string') as
+          | string
+          | undefined
+        if (stringValue) return resolve(stringValue)
+      }
+      // fallback: resolve empty string
+      resolve('')
     })
   })
 }

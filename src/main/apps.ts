@@ -17,7 +17,7 @@ interface AppEntry {
   id: string
   name: string
   comment?: string
-  exec: string
+  command: string
   icon?: string
 }
 
@@ -39,7 +39,7 @@ const parseDesktop = (content: string, filePath: string): AppEntry | null => {
       id: path.basename(filePath),
       name: entry.Name,
       comment: entry.Comment,
-      exec: clean,
+      command: clean,
       icon: entry.Icon
     }
   } catch (e) {
