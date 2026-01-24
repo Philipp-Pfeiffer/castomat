@@ -189,8 +189,8 @@
 
 @layer utilities {
   .glass {
-    /* increased transparency from 0.95 -> 0.85 for more see-through glass */
-    background: rgba(20, 20, 22, 0.85);
+    /* further increase transparency: now 0.75 for a lighter glass look */
+    background: rgba(20, 20, 22, 0.75);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
