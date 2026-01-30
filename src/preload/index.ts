@@ -57,6 +57,28 @@ if (process.contextIsolated) {
       },
       reloadApp: () => {
         return ipcRenderer.send('reload-app')
+      },
+      // Terminal APIs
+      validateShellCommand: (input) => {
+        return ipcRenderer.invoke('validate-shell-command', input)
+      },
+      startTerminal: () => {
+        return ipcRenderer.invoke('start-terminal')
+      },
+      stopTerminal: () => {
+        return ipcRenderer.invoke('stop-terminal')
+      },
+      terminalInput: (data) => {
+        return ipcRenderer.invoke('terminal-input', data)
+      },
+      onTerminalOutput: (callback) => {
+        ipcRenderer.on('terminal-output', (_, data) => callback(data))
+      },
+      getCommandCache: () => {
+        return ipcRenderer.invoke('get-command-cache')
+      },
+      onInitCommandCache: (callback) => {
+        ipcRenderer.on('init-command-cache', (_, data) => callback(data))
       }
     } as ElectronAPI & ApiT)
 

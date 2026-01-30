@@ -12,13 +12,20 @@ import {
   getPluginActions,
   getPluginsDir,
   getPlugins,
+  initCommandCache,
   listInstalledApplications,
   openApplication,
   openExternal,
   runCommand,
   runPluginAction,
   setDisabledPlugins,
-  setHotkey
+  setHotkey,
+  startTerminal,
+  stopTerminal,
+  validateShellCommand,
+  writeToTerminal,
+  setupTerminalCallback,
+  getCommandCache
 } from './handlers'
 import { setupAutoUpdater } from './autoUpdater'
 
@@ -125,6 +132,10 @@ if (!gotTheLock) {
     await registerGlobalShortcut()
     createTray()
 
+    // Initialize command cache
+    await initCommandCache()
+    console.log('Command cache initialized')
+
     ipcMain.handle('get-commands', () => {
       return getCommands()
     })
@@ -181,6 +192,37 @@ if (!gotTheLock) {
       return getHotkeys()
     })
 
+    // Terminal IPC handlers
+    ipcMain.handle('get-command-cache', async () => {
+      console.log('get-command-cache handler called')
+      const cache = getCommandCache()
+      console.log(`Returning ${cache.size} commands`)
+      return Array.from(cache)
+    })
+
+    ipcMain.handle('validate-shell-command', async (_, input) => {
+      return validateShellCommand(input)
+    })
+
+    ipcMain.handle('start-terminal', async () => {
+      if (mainWindow) {
+        startTerminal(mainWindow)
+        setupTerminalCallback(mainWindow, (data) => {
+          if (mainWindow) {
+            mainWindow.webContents.send('terminal-output', data)
+          }
+        })
+      }
+    })
+
+    ipcMain.handle('stop-terminal', async () => {
+      stopTerminal()
+    })
+
+    ipcMain.handle('terminal-input', async (_, data) => {
+      writeToTerminal(data)
+    })
+
     ipcMain.on('show-main-window', () => {
       if (mainWindow) mainWindow.show()
     })
@@ -191,6 +233,12 @@ if (!gotTheLock) {
 
     ipcMain.on('reload-app', () => {
       if (mainWindow) mainWindow.reload()
+    })
+
+    // Send command cache to renderer when window is ready
+    mainWindow?.webContents.on('did-finish-load', () => {
+      const cache = getCommandCache()
+      mainWindow?.webContents.send('init-command-cache', Array.from(cache))
     })
 
     app.on('activate', async () => {

@@ -402,3 +402,77 @@ export const getDisabledPlugins = (): Promise<string[]> => {
     })
   })
 }
+
+// Terminal-related imports
+import { loadCommandCache, isKnownCommand } from './commandCache'
+import { getTerminalSession, destroyTerminalSession } from './terminal'
+
+// Command cache storage
+let commandCache: Set<string> | null = null
+
+/**
+ * Initializes the command cache
+ */
+export const initCommandCache = async (): Promise<void> => {
+  commandCache = await loadCommandCache()
+}
+
+/**
+ * Gets the command cache
+ */
+export const getCommandCache = (): Set<string> => {
+  if (!commandCache) {
+    return new Set()
+  }
+  return commandCache
+}
+
+/**
+ * Validates if input starts with a known command
+ */
+export const validateShellCommand = async (input: string): Promise<boolean> => {
+  if (!commandCache) {
+    commandCache = await loadCommandCache()
+  }
+  return isKnownCommand(input, commandCache)
+}
+
+/**
+ * Starts the terminal session
+ */
+export const startTerminal = (window: Electron.BrowserWindow): void => {
+  const session = getTerminalSession(window)
+  session.start()
+}
+
+/**
+ * Stops the terminal session
+ */
+export const stopTerminal = (): void => {
+  destroyTerminalSession()
+}
+
+/**
+ * Writes to the terminal
+ */
+export const writeToTerminal = (data: string): void => {
+  const { BrowserWindow } = require('electron')
+  const window = BrowserWindow.getFocusedWindow()
+  if (window) {
+    const session = getTerminalSession(window)
+    if (session.isRunning()) {
+      session.write(data)
+    }
+  }
+}
+
+/**
+ * Sets up terminal data callback
+ */
+export const setupTerminalCallback = (
+  window: Electron.BrowserWindow,
+  callback: (data: string) => void
+): void => {
+  const session = getTerminalSession(window)
+  session.onData(callback)
+}

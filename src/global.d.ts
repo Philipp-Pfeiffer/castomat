@@ -34,6 +34,14 @@ declare global {
     showMainWindow: () => Promise<void>
     hideMainWindow: () => Promise<void>
     reloadApp: () => Promise<void>
+    // Terminal APIs
+    validateShellCommand: (input: string) => Promise<boolean>
+    startTerminal: () => Promise<void>
+    stopTerminal: () => Promise<void>
+    terminalInput: (data: string) => Promise<void>
+    onTerminalOutput: (callback: (data: string) => void) => void
+    getCommandCache: () => Promise<string[]>
+    onInitCommandCache: (callback: (commands: string[]) => void) => void
   }
 
   type PluginT = {

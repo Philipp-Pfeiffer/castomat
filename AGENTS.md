@@ -17,13 +17,21 @@ This file contains essential information for AI agents working on the Backslash 
 
 ### Code Quality
 
-- `npm run lint` - Run ESLint with auto-fix
+- `npm run lint` - Run ESLint with auto-fix (uses `eslint.config.js`)
 - `npm run format` - Format code with Prettier
 - `npm run typecheck` - Typecheck both main and renderer processes
 - `npm run typecheck:node` - Typecheck main process only
 - `npm run typecheck:web` - Typecheck renderer process only
 
 > **Important**: This project does NOT have test scripts. Focus on type checking and linting for verification.
+
+### EditorConfig
+
+- Indent: 2 spaces
+- Line endings: LF
+- Charset: UTF-8
+- Trim trailing whitespace: true
+- Insert final newline: true
 
 ### Running Individual Checks
 
@@ -40,7 +48,9 @@ npm run lint && npm run typecheck
 - Use single quotes for import paths
 - Node imports use `import ... from 'node:path'` pattern (Electron-specific)
 - Group imports: third-party modules first, then internal/relative imports
-- Path alias: `@renderer/*` maps to `src/renderer/src/*`
+- Path aliases:
+  - `@renderer/*` maps to `src/renderer/src/*`
+  - `@/*` maps to `./src/*` (root src directory)
 - Example:
   ```ts
   import { useState, useEffect } from 'react'
