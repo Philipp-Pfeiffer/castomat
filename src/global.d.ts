@@ -42,6 +42,8 @@ declare global {
     onTerminalOutput: (callback: (data: string) => void) => void
     getCommandCache: () => Promise<string[]>
     onInitCommandCache: (callback: (commands: string[]) => void) => void
+    runInKitty: (command: string) => Promise<void>
+    writeClipboard: (text: string) => Promise<void>
   }
 
   type PluginT = {

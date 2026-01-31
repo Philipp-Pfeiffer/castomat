@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, shell, Tray } from 'electron'
+import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Menu, shell, Tray } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join } from 'path'
 
@@ -25,7 +25,8 @@ import {
   validateShellCommand,
   writeToTerminal,
   setupTerminalCallback,
-  getCommandCache
+  getCommandCache,
+  runInKitty
 } from './handlers'
 import { setupAutoUpdater } from './autoUpdater'
 
@@ -221,6 +222,15 @@ if (!gotTheLock) {
 
     ipcMain.handle('terminal-input', async (_, data) => {
       writeToTerminal(data)
+    })
+
+    ipcMain.handle('run-in-kitty', async (_, command: string) => {
+      runInKitty(command)
+      if (mainWindow) mainWindow.hide()
+    })
+
+    ipcMain.handle('write-clipboard', async (_, text: string) => {
+      clipboard.writeText(text)
     })
 
     ipcMain.on('show-main-window', () => {

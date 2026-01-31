@@ -3,7 +3,7 @@ import os from 'os'
 import storage from 'electron-json-storage'
 import fs from 'fs'
 import path from 'path'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import axios from 'axios'
 import cheerio from 'cheerio'
 import yaml from 'js-yaml'
@@ -475,4 +475,90 @@ export const setupTerminalCallback = (
 ): void => {
   const session = getTerminalSession(window)
   session.onData(callback)
+}
+
+/**
+ * Builds a temp rcfile: .profile + .bashrc with only fetch lines commented out (not removed),
+ * so syntax stays valid and we get fetch once (in script) then interactive shell without double fetch.
+ */
+function buildLauncherRcContent(home: string): string {
+  const profileLine = 'source ~/.profile 2>/dev/null\n'
+  const bashrcPath = path.join(home, '.bashrc')
+  if (!fs.existsSync(bashrcPath)) return profileLine
+  let bashrc: string
+  try {
+    bashrc = fs.readFileSync(bashrcPath, 'utf8')
+  } catch {
+    return profileLine
+  }
+  const lines = bashrc.split('\n').map((line) => {
+    const t = line.trim()
+    if (t.startsWith('#')) return line
+    if (/^(fastfetch|neofetch)\b/i.test(t)) return line.replace(/^\s*/, (m) => m + '# ')
+    return line
+  })
+  return profileLine + lines.join('\n')
+}
+
+/**
+ * Opens a new kitty window and runs the command there.
+ * - Starts in HOME. Order: fetch once, then user command, then interactive bash (window stays open).
+ * - Uses a temp rcfile with only fetch lines commented out so .bashrc syntax stays valid and no double fetch.
+ */
+export const runInKitty = (command: string): void => {
+  const trimmed = command.trim()
+  if (!trimmed) return
+
+  const home = process.env.HOME || process.env.USER ? `/home/${process.env.USER}` : '/'
+  const rcPath = path.join(os.tmpdir(), `castomat-rc-${process.pid}-${Date.now()}`)
+  const scriptPath = path.join(os.tmpdir(), `castomat-script-${process.pid}-${Date.now()}.sh`)
+
+  try {
+    // Create rcfile without fetch
+    fs.writeFileSync(rcPath, buildLauncherRcContent(home), 'utf8')
+
+    // Create a script that runs fetch, then the command, then starts interactive bash
+    const scriptContent = `#!/bin/bash
+cd "${home}"
+(fastfetch 2>/dev/null || neofetch 2>/dev/null)
+${trimmed}
+exec bash --rcfile "${rcPath}" -i
+`
+    fs.writeFileSync(scriptPath, scriptContent, 'utf8')
+    fs.chmodSync(scriptPath, 0o755)
+  } catch {
+    // fallback: no rcfile, window stays open but user may see double fetch
+    const bashScript = `(fastfetch 2>/dev/null || neofetch 2>/dev/null); ${trimmed}; exec bash -l`
+    const child = spawn('kitty', ['-e', 'bash', '-c', bashScript], {
+      detached: true,
+      stdio: 'ignore',
+      env: process.env,
+      cwd: home
+    })
+    child.unref()
+    return
+  }
+
+  // Start kitty with the script
+  const child = spawn('kitty', ['-e', scriptPath], {
+    detached: true,
+    stdio: 'ignore',
+    env: process.env,
+    cwd: home
+  })
+  child.unref()
+
+  child.on('error', (err) => {
+    console.warn('Failed to launch kitty:', err.message)
+  })
+
+  // Cleanup temp files after a delay
+  setTimeout(() => {
+    try {
+      fs.unlinkSync(rcPath)
+      fs.unlinkSync(scriptPath)
+    } catch {
+      // ignore cleanup errors
+    }
+  }, 5000)
 }

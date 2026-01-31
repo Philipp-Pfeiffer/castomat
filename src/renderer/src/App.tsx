@@ -15,16 +15,15 @@ import { CommandApplications } from '@renderer/components/CommandApplications'
 import { CommandShortcuts } from '@renderer/components/CommandShortcuts'
 import { useScrollToTop, useCommandValidator } from '@renderer/hooks'
 import { Settings } from '@renderer/components/Settings'
-import { Terminal } from '@renderer/components/Terminal'
 import { ExitConfirmation } from '@renderer/components/ExitConfirmation'
+import { evaluateMathExpression, looksLikeMathExpression } from '@renderer/lib/calculator'
 
-type AppMode = 'search' | 'terminal' | 'exit-confirmation'
+type AppMode = 'search' | 'exit-confirmation'
 
 const App = () => {
   const [selectedCommand, setSelectedCommand] = useState<CommandT | null>(null)
   const [commandSearch, setCommandSearch] = useState('')
   const [mode, setMode] = useState<AppMode>('search')
-  const [initialTerminalCommand, setInitialTerminalCommand] = useState<string>('')
   const commandListRef = useRef<HTMLDivElement | null>(null)
   const [currentBangName, setCurrentBangName] = useState<string | null>(null)
 
@@ -35,9 +34,7 @@ const App = () => {
   const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault()
-      if (mode === 'terminal') {
-        setMode('exit-confirmation')
-      } else if (mode === 'exit-confirmation') {
+      if (mode === 'exit-confirmation') {
         setMode('search')
         setCommandSearch('')
       } else {
@@ -47,20 +44,28 @@ const App = () => {
   }
 
   const handleRunInTerminal = () => {
-    if (commandSearch.trim()) {
-      setInitialTerminalCommand(commandSearch)
-      setMode('terminal')
+    const cmd = commandSearch.trim()
+    if (cmd && window.electron?.runInKitty) {
+      window.electron.runInKitty(cmd)
+      setCommandSearch('')
     }
-  }
-
-  const handleCancelExit = () => {
-    setMode('terminal')
   }
 
   const handleConfirmExit = () => {
     setMode('search')
     setCommandSearch('')
-    setInitialTerminalCommand('')
+  }
+
+  const calcResult = evaluateMathExpression(commandSearch)
+  const showCalculator = looksLikeMathExpression(commandSearch) && calcResult !== null
+
+  const handleCopyCalculatorResult = () => {
+    if (calcResult === null) return
+    const text = Number.isInteger(calcResult)
+      ? String(calcResult)
+      : String(Number(calcResult.toPrecision(10)))
+    window.electron?.writeClipboard?.(text)
+    setCommandSearch('')
   }
 
   const commandFilter = (value: string, search: string, keywords: string[] | undefined): number => {
@@ -78,8 +83,6 @@ const App = () => {
         if (e.key === 'Escape') {
           e.preventDefault()
           handleConfirmExit()
-        } else if (e.key !== 'Escape') {
-          handleCancelExit()
         }
       }
     }
@@ -95,7 +98,11 @@ const App = () => {
           filter={commandFilter}
           loop
           defaultValue={
-            isValidCommand && commandSearch.trim() ? `terminal-${commandSearch}` : undefined
+            showCalculator
+              ? `calc-${calcResult}`
+              : isValidCommand && commandSearch.trim()
+                ? `terminal-${commandSearch}`
+                : undefined
           }
         >
           <div className="flex items-center gap-2 px-4 py-3 border-b border-glass">
@@ -115,7 +122,31 @@ const App = () => {
           </div>
 
           <CommandList ref={commandListRef}>
-            {/* Terminal Group - always first, before CommandEmpty */}
+            {/* Calculator Group - show when input looks like math */}
+            {showCalculator && (
+              <CommandGroup heading="Calculator">
+                <CommandItem
+                  onSelect={handleCopyCalculatorResult}
+                  value={`calc-${calcResult}`}
+                  keywords={[commandSearch, String(calcResult), 'copy', 'calculator']}
+                >
+                  <div className="flex items-center justify-between w-full gap-4">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <i className="ph ph-calculator text-white/60 shrink-0" />
+                      <span className="truncate">{commandSearch.trim()}</span>
+                      <span className="text-white/40">=</span>
+                    </div>
+                    <span className="font-mono text-white/87 tabular-nums shrink-0">
+                      {Number.isInteger(calcResult)
+                        ? calcResult
+                        : Number(calcResult.toPrecision(10))}
+                    </span>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+            )}
+
+            {/* Terminal Group */}
             {isValidCommand && commandSearch.trim() && (
               <CommandGroup heading="Terminal">
                 <CommandItem
@@ -140,8 +171,17 @@ const App = () => {
 
           <Footer>
             <span className="flex items-center gap-2 text-xs text-white/60">
-              Run
-              <CommandShortcut>↵</CommandShortcut>
+              {showCalculator ? (
+                <>
+                  Copy result
+                  <CommandShortcut>↵</CommandShortcut>
+                </>
+              ) : (
+                <>
+                  Run
+                  <CommandShortcut>↵</CommandShortcut>
+                </>
+              )}
             </span>
           </Footer>
         </Command>
@@ -155,12 +195,10 @@ const App = () => {
         />
       )}
 
-      {mode === 'terminal' && <Terminal initialCommand={initialTerminalCommand} />}
-
       <ExitConfirmation
         isOpen={mode === 'exit-confirmation'}
         onConfirm={handleConfirmExit}
-        onCancel={handleCancelExit}
+        onCancel={() => setMode('search')}
       />
     </div>
   )

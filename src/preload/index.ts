@@ -79,6 +79,12 @@ if (process.contextIsolated) {
       },
       onInitCommandCache: (callback) => {
         ipcRenderer.on('init-command-cache', (_, data) => callback(data))
+      },
+      runInKitty: (command: string) => {
+        return ipcRenderer.invoke('run-in-kitty', command)
+      },
+      writeClipboard: (text: string) => {
+        return ipcRenderer.invoke('write-clipboard', text)
       }
     } as ElectronAPI & ApiT)
 
