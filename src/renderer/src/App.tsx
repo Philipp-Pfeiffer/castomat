@@ -57,7 +57,8 @@ const App = () => {
   }
 
   const calcResult = evaluateMathExpression(commandSearch)
-  const showCalculator = looksLikeMathExpression(commandSearch) && calcResult !== null
+  const showCalculator = looksLikeMathExpression(commandSearch)
+  const hasValidCalcResult = calcResult !== null
 
   const handleCopyCalculatorResult = () => {
     if (calcResult === null) return
@@ -70,6 +71,7 @@ const App = () => {
 
   const commandFilter = (value: string, search: string, keywords: string[] | undefined): number => {
     if (value && value.startsWith('sc-')) return 1
+    if (value && value.startsWith('calc-')) return 1
     const extendValue = keywords?.join(' ') || ''
     const words = search.toLowerCase().split(' ')
     const found = words.every((word) => extendValue.toLowerCase().includes(word))
@@ -98,7 +100,7 @@ const App = () => {
           filter={commandFilter}
           loop
           defaultValue={
-            showCalculator
+            showCalculator && hasValidCalcResult
               ? `calc-${calcResult}`
               : isValidCommand && commandSearch.trim()
                 ? `terminal-${commandSearch}`
@@ -122,27 +124,38 @@ const App = () => {
           </div>
 
           <CommandList ref={commandListRef}>
-            {/* Calculator Group - show when input looks like math */}
+            {/* Calculator Group - show when input looks like math (stable, no snap in/out) */}
             {showCalculator && (
               <CommandGroup heading="Calculator">
-                <CommandItem
-                  onSelect={handleCopyCalculatorResult}
-                  value={`calc-${calcResult}`}
-                  keywords={[commandSearch, String(calcResult), 'copy', 'calculator']}
-                >
-                  <div className="flex items-center justify-between w-full gap-4">
+                {hasValidCalcResult ? (
+                  <CommandItem
+                    onSelect={handleCopyCalculatorResult}
+                    value={`calc-${calcResult}`}
+                    keywords={[commandSearch, String(calcResult), 'copy', 'calculator']}
+                  >
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <i className="ph ph-calculator text-white/60 shrink-0" />
+                        <span className="truncate">{commandSearch.trim()}</span>
+                        <span className="text-white/40">=</span>
+                      </div>
+                      <span className="font-mono text-white/87 tabular-nums shrink-0">
+                        {Number.isInteger(calcResult)
+                          ? calcResult
+                          : Number(calcResult.toPrecision(10))}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ) : (
+                  <CommandItem value="calc-invalid" disabled>
                     <div className="flex items-center gap-2 min-w-0">
                       <i className="ph ph-calculator text-white/60 shrink-0" />
                       <span className="truncate">{commandSearch.trim()}</span>
-                      <span className="text-white/40">=</span>
+                      <span className="text-white/40">–</span>
+                      <span className="text-white/40">Complete the expression</span>
                     </div>
-                    <span className="font-mono text-white/87 tabular-nums shrink-0">
-                      {Number.isInteger(calcResult)
-                        ? calcResult
-                        : Number(calcResult.toPrecision(10))}
-                    </span>
-                  </div>
-                </CommandItem>
+                  </CommandItem>
+                )}
               </CommandGroup>
             )}
 
@@ -171,7 +184,7 @@ const App = () => {
 
           <Footer>
             <span className="flex items-center gap-2 text-xs text-white/60">
-              {showCalculator ? (
+              {showCalculator && hasValidCalcResult ? (
                 <>
                   Copy result
                   <CommandShortcut>↵</CommandShortcut>

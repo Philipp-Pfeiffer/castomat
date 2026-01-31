@@ -478,26 +478,35 @@ export const setupTerminalCallback = (
 }
 
 /**
- * Builds a temp rcfile: .profile + .bashrc with only fetch lines commented out (not removed),
- * so syntax stays valid and we get fetch once (in script) then interactive shell without double fetch.
+ * Builds a temp rcfile that:
+ * 1. Defines fastfetch/neofetch as no-op functions (prevents double fetch from .bashrc)
+ * 2. Sources the original .bashrc (preserves all aliases, functions, settings)
+ * This avoids syntax errors from commenting out lines.
  */
 function buildLauncherRcContent(home: string): string {
-  const profileLine = 'source ~/.profile 2>/dev/null\n'
   const bashrcPath = path.join(home, '.bashrc')
-  if (!fs.existsSync(bashrcPath)) return profileLine
-  let bashrc: string
-  try {
-    bashrc = fs.readFileSync(bashrcPath, 'utf8')
-  } catch {
-    return profileLine
+  const profilePath = path.join(home, '.profile')
+
+  let content = ''
+
+  // Source .profile if it exists
+  if (fs.existsSync(profilePath)) {
+    content += `source "${profilePath}" 2>/dev/null\n`
   }
-  const lines = bashrc.split('\n').map((line) => {
-    const t = line.trim()
-    if (t.startsWith('#')) return line
-    if (/^(fastfetch|neofetch)\b/i.test(t)) return line.replace(/^\s*/, (m) => m + '# ')
-    return line
-  })
-  return profileLine + lines.join('\n')
+
+  // Define no-op functions to prevent double fetch
+  content += `# Prevent double fetch - castomat already ran it\n`
+  content += `fastfetch() { :; }\n`
+  content += `neofetch() { :; }\n`
+  content += `export -f fastfetch neofetch 2>/dev/null\n`
+
+  // Source original .bashrc
+  if (fs.existsSync(bashrcPath)) {
+    content += `\n# Load original .bashrc\n`
+    content += `source "${bashrcPath}"\n`
+  }
+
+  return content
 }
 
 /**
