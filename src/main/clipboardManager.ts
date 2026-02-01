@@ -32,13 +32,19 @@ const getEntries = async (): Promise<ClipboardEntryT[]> => {
     const data = await storageGet(CLIPBOARD_STORAGE_KEY)
     const arr = Array.isArray(data) ? data : []
     return arr.filter((e): e is ClipboardEntryT => e && typeof e === 'object' && 'id' in e)
-  } catch {
+  } catch (error) {
+    console.error('[ClipboardManager] Failed to get entries:', error)
     return []
   }
 }
 
 const setEntries = async (entries: ClipboardEntryT[]) => {
-  await storageSet(CLIPBOARD_STORAGE_KEY, entries.slice(0, MAX_ENTRIES))
+  try {
+    await storageSet(CLIPBOARD_STORAGE_KEY, entries.slice(0, MAX_ENTRIES))
+  } catch (error) {
+    console.error('[ClipboardManager] Failed to save entries:', error)
+    throw error
+  }
 }
 
 const hashString = (s: string) => {
@@ -64,22 +70,59 @@ const isDuplicateText = (text: string, entries: ClipboardEntryT[]): boolean => {
 }
 
 const addEntry = async (entry: ClipboardEntryT) => {
-  const entries = await getEntries()
-  const pinned = entries.filter((e) => e.pinned)
-  const unpinned = entries.filter((e) => !e.pinned)
-  const withoutDup = unpinned.filter((e) => e.id !== entry.id)
-  await setEntries([entry, ...pinned, ...withoutDup])
+  try {
+    const entries = await getEntries()
+    const pinned = entries.filter((e) => e.pinned)
+    const unpinned = entries.filter((e) => !e.pinned)
+    const withoutDup = unpinned.filter((e) => e.id !== entry.id)
+    await setEntries([entry, ...pinned, ...withoutDup])
+    console.log(`[ClipboardManager] Added entry: ${entry.type} (${entry.id})`)
+  } catch (error) {
+    console.error('[ClipboardManager] Failed to add entry:', error)
+    throw error
+  }
 }
 
+let pollCount = 0
+
 const pollClipboard = async () => {
+  pollCount++
   try {
-    if (mainWindowRef?.isFocused()) return
+    // Log every 5th poll to verify interval is running
+    if (pollCount % 5 === 0) {
+      console.log(
+        `[ClipboardManager] Poll #${pollCount} running (window visible: ${mainWindowRef?.isVisible()}, focused: ${mainWindowRef?.isFocused()})`
+      )
+    }
+
+    // Only skip if window is both visible AND focused
+    // Hidden windows should still allow clipboard monitoring
+    if (mainWindowRef?.isVisible() && mainWindowRef?.isFocused()) {
+      if (pollCount % 5 === 0) {
+        console.log('[ClipboardManager] Skipping poll - window is visible and focused')
+      }
+      return
+    }
+
     const text = clipboard.readText()
     const textHash = hashString(text)
+
+    // Debug logging - show actual text content and length
+    if (pollCount % 5 === 0) {
+      const textPreview = text ? `"${text.substring(0, 30).replace(/\n/g, '\\n')}"` : '(empty)'
+      console.log(
+        `[ClipboardManager] Read text: ${textPreview} (length: ${text?.length || 0}, hash: ${textHash}, lastHash: ${lastTextHash})`
+      )
+    }
+
     if (text && textHash !== lastTextHash) {
+      console.log(
+        `[ClipboardManager] New text detected! Hash changed from ${lastTextHash} to ${textHash}`
+      )
       lastTextHash = textHash
       const entries = await getEntries()
       if (!isDuplicateText(text, entries)) {
+        console.log('[ClipboardManager] Text is not duplicate, adding entry')
         await addEntry({
           id: randomUUID(),
           text,
@@ -87,9 +130,13 @@ const pollClipboard = async () => {
           pinned: false,
           type: 'text'
         })
+      } else {
+        console.log('[ClipboardManager] Text is duplicate, skipping')
       }
     } else if (!text) {
       lastTextHash = null
+    } else if (pollCount % 5 === 0) {
+      console.log('[ClipboardManager] Text unchanged or empty')
     }
 
     const img = clipboard.readImage()
@@ -97,6 +144,7 @@ const pollClipboard = async () => {
       const buf = img.toPNG()
       const imgHash = hashBuffer(buf)
       if (imgHash !== lastImageHash) {
+        console.log('[ClipboardManager] New image detected, hash changed')
         lastImageHash = imgHash
         const thumb = img.resize(THUMBNAIL_SIZE)
         const fullDataUrl = img.toDataURL()
@@ -113,22 +161,38 @@ const pollClipboard = async () => {
     } else {
       lastImageHash = null
     }
-  } catch {
-    // Ignore clipboard read errors
+  } catch (error) {
+    console.error('[ClipboardManager] Error polling clipboard:', error)
   }
 }
 
 export const initClipboardManager = async (window?: BrowserWindow) => {
-  if (pollInterval) return
-  mainWindowRef = window ?? null
-  const entries = await getEntries()
-  if (entries.length > 0) {
-    const latest = entries[0]
-    if (latest.type === 'text' && latest.text) {
-      lastTextHash = hashString(latest.text)
-    }
+  if (pollInterval) {
+    console.log('[ClipboardManager] Already initialized, skipping')
+    return
   }
-  pollInterval = setInterval(pollClipboard, POLL_INTERVAL_MS)
+
+  try {
+    mainWindowRef = window ?? null
+    console.log('[ClipboardManager] Initializing...')
+
+    const entries = await getEntries()
+    console.log(`[ClipboardManager] Loaded ${entries.length} entries from storage`)
+
+    if (entries.length > 0) {
+      const latest = entries[0]
+      if (latest.type === 'text' && latest.text) {
+        lastTextHash = hashString(latest.text)
+        console.log('[ClipboardManager] Set initial text hash from latest entry')
+      }
+    }
+
+    pollInterval = setInterval(pollClipboard, POLL_INTERVAL_MS)
+    console.log(`[ClipboardManager] Started polling every ${POLL_INTERVAL_MS}ms`)
+  } catch (error) {
+    console.error('[ClipboardManager] Failed to initialize:', error)
+    throw error
+  }
 }
 
 export const stopClipboardManager = () => {
@@ -157,27 +221,51 @@ export const getClipboardHistory = async (search?: string): Promise<ClipboardEnt
 }
 
 export const deleteClipboardEntry = async (id: string) => {
-  const entries = (await getEntries()).filter((e) => e.id !== id)
-  await setEntries(entries)
+  try {
+    const entries = (await getEntries()).filter((e) => e.id !== id)
+    await setEntries(entries)
+    console.log(`[ClipboardManager] Deleted entry: ${id}`)
+  } catch (error) {
+    console.error(`[ClipboardManager] Failed to delete entry ${id}:`, error)
+    throw error
+  }
 }
 
 export const pinClipboardEntry = async (id: string, pinned: boolean) => {
-  const entries = await getEntries()
-  const idx = entries.findIndex((e) => e.id === id)
-  if (idx === -1) return
-  entries[idx] = { ...entries[idx], pinned }
-  await setEntries(entries)
+  try {
+    const entries = await getEntries()
+    const idx = entries.findIndex((e) => e.id === id)
+    if (idx === -1) {
+      console.warn(`[ClipboardManager] Entry not found for pinning: ${id}`)
+      return
+    }
+    entries[idx] = { ...entries[idx], pinned }
+    await setEntries(entries)
+    console.log(`[ClipboardManager] ${pinned ? 'Pinned' : 'Unpinned'} entry: ${id}`)
+  } catch (error) {
+    console.error(`[ClipboardManager] Failed to ${pinned ? 'pin' : 'unpin'} entry ${id}:`, error)
+    throw error
+  }
 }
 
 export const writeClipboardFromEntry = (entry: ClipboardEntryT) => {
-  if (entry.type === 'text' && entry.text) {
-    clipboard.writeText(entry.text)
-    return
-  }
-  if (entry.type === 'image' && entry.imageBase64) {
-    const img = nativeImage.createFromDataURL(entry.imageBase64)
-    if (!img.isEmpty()) {
-      clipboard.writeImage(img)
+  try {
+    if (entry.type === 'text' && entry.text) {
+      clipboard.writeText(entry.text)
+      console.log('[ClipboardManager] Wrote text to clipboard')
+      return
     }
+    if (entry.type === 'image' && entry.imageBase64) {
+      const img = nativeImage.createFromDataURL(entry.imageBase64)
+      if (!img.isEmpty()) {
+        clipboard.writeImage(img)
+        console.log('[ClipboardManager] Wrote image to clipboard')
+      } else {
+        console.warn('[ClipboardManager] Failed to create image from data URL')
+      }
+    }
+  } catch (error) {
+    console.error('[ClipboardManager] Failed to write to clipboard:', error)
+    throw error
   }
 }

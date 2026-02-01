@@ -153,8 +153,12 @@ if (!gotTheLock) {
     console.log('Command cache initialized')
 
     // Initialize clipboard manager (polls only when window not focused)
-    await initClipboardManager(mainWindow)
-    console.log('Clipboard manager initialized')
+    try {
+      await initClipboardManager(mainWindow)
+      console.log('Clipboard manager initialized successfully')
+    } catch (error) {
+      console.error('Failed to initialize clipboard manager:', error)
+    }
 
     ipcMain.handle('get-commands', () => {
       return getCommands()
