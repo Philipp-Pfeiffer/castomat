@@ -47,34 +47,39 @@ const DEPS = {
  * @returns resolved with an array of command objects
  */
 export const getCommands = async () => {
-  const currentPluginsDir = await getPluginsDir()
-  const disabledPlugins = await getDisabledPlugins()
-  const plugins = fs
-    .readdirSync(currentPluginsDir)
-    .filter((plugin) => plugin !== '.git')
-    .filter((plugin) => {
-      const pluginPath = path.join(currentPluginsDir, plugin)
-      return fs.statSync(pluginPath).isDirectory()
-    })
+  try {
+    const currentPluginsDir = await getPluginsDir()
+    if (!currentPluginsDir || typeof currentPluginsDir !== 'string') return []
+    const disabledPlugins = await getDisabledPlugins()
+    const plugins = fs
+      .readdirSync(currentPluginsDir)
+      .filter((plugin) => plugin !== '.git')
+      .filter((plugin) => {
+        const pluginPath = path.join(currentPluginsDir, plugin)
+        return fs.statSync(pluginPath).isDirectory()
+      })
 
-  return plugins.flatMap((plugin) => {
-    if (disabledPlugins.includes(plugin)) {
-      return []
-    }
-
-    const manifestPath = path.join(currentPluginsDir, plugin, 'manifest.yml')
-    const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf8')) as ManifestT
-
-    return manifest.commands.map((command) => ({
-      ...command,
-      plugin: {
-        name: plugin,
-        label: manifest.label,
-        version: manifest.version,
-        author: manifest.author
+    return plugins.flatMap((plugin) => {
+      if (disabledPlugins.includes(plugin)) {
+        return []
       }
-    }))
-  })
+
+      const manifestPath = path.join(currentPluginsDir, plugin, 'manifest.yml')
+      const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf8')) as ManifestT
+
+      return manifest.commands.map((command) => ({
+        ...command,
+        plugin: {
+          name: plugin,
+          label: manifest.label,
+          version: manifest.version,
+          author: manifest.author
+        }
+      }))
+    })
+  } catch {
+    return []
+  }
 }
 
 /**
@@ -292,58 +297,63 @@ export const choosePluginsDir = async () => {
   return null
 }
 
+const DEFAULT_PLUGINS_DIR = path.join(os.tmpdir(), 'castomat-plugins')
+
 /**
  * Gets the directory where plugins are stored.
  * @returns a Promise that resolves with the path to the plugins directory.
  */
 export const getPluginsDir = (): Promise<string> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     storage.get('pluginsDir', (error, data) => {
-      if (error) throw error
+      if (error) return reject(error)
       // storage may return a string or an object; normalize to string
-      if (!data) return resolve('')
-      if (typeof data === 'string') return resolve(data)
+      if (!data) return resolve(DEFAULT_PLUGINS_DIR)
+      if (typeof data === 'string' && data.trim()) return resolve(data.trim())
       // sometimes storage returns { path: '/some/path' } or similar
       if (typeof data === 'object') {
-        // find string value inside object
         const stringValue = Object.values(data).find((v) => typeof v === 'string') as
           | string
           | undefined
-        if (stringValue) return resolve(stringValue)
+        if (stringValue?.trim()) return resolve(stringValue.trim())
       }
-      // fallback: resolve empty string
-      resolve('')
+      resolve(DEFAULT_PLUGINS_DIR)
     })
   })
 }
 
 export const getPlugins = async (): Promise<PluginT[]> => {
-  const pluginsDir = await getPluginsDir()
-  const plugins = fs
-    .readdirSync(pluginsDir)
-    .filter((plugin) => plugin !== '.git')
-    .filter((plugin) => {
-      const pluginPath = path.join(pluginsDir, plugin)
-      return fs.statSync(pluginPath).isDirectory()
-    })
+  try {
+    const pluginsDir = await getPluginsDir()
+    if (!pluginsDir || typeof pluginsDir !== 'string') return []
+    const plugins = fs
+      .readdirSync(pluginsDir)
+      .filter((plugin) => plugin !== '.git')
+      .filter((plugin) => {
+        const pluginPath = path.join(pluginsDir, plugin)
+        return fs.statSync(pluginPath).isDirectory()
+      })
 
-  return plugins
-    .map((plugin) => {
-      try {
-        const manifestPath = path.join(pluginsDir, plugin, 'manifest.yml')
-        const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf8')) as ManifestT
-        return {
-          name: plugin,
-          label: manifest.label,
-          version: manifest.version,
-          author: manifest.author
+    return plugins
+      .map((plugin) => {
+        try {
+          const manifestPath = path.join(pluginsDir, plugin, 'manifest.yml')
+          const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf8')) as ManifestT
+          return {
+            name: plugin,
+            label: manifest.label,
+            version: manifest.version,
+            author: manifest.author
+          }
+        } catch (error) {
+          console.warn(`Failed to load plugin ${plugin}:`, error)
+          return null
         }
-      } catch (error) {
-        console.warn(`Failed to load plugin ${plugin}:`, error)
-        return null
-      }
-    })
-    .filter((plugin): plugin is PluginT => plugin !== null)
+      })
+      .filter((plugin): plugin is PluginT => plugin !== null)
+  } catch {
+    return []
+  }
 }
 
 /**
@@ -423,6 +433,15 @@ export const getDisabledPlugins = (): Promise<string[]> => {
 // Terminal-related imports
 import { loadCommandCache, isKnownCommand } from './commandCache'
 import { getTerminalSession, destroyTerminalSession } from './terminal'
+
+// Clipboard manager
+export {
+  initClipboardManager,
+  getClipboardHistory,
+  deleteClipboardEntry,
+  pinClipboardEntry,
+  writeClipboardFromEntry
+} from './clipboardManager'
 
 // Command cache storage
 let commandCache: Set<string> | null = null

@@ -13,6 +13,7 @@ import { Commands } from '@renderer/components/Commands'
 import { CommandPage } from '@renderer/components/CommandPage'
 import { CommandApplications } from '@renderer/components/CommandApplications'
 import { CommandShortcuts } from '@renderer/components/CommandShortcuts'
+import { ClipboardPage } from '@renderer/components/ClipboardPage'
 import { useScrollToTop, useCommandValidator } from '@renderer/hooks'
 import { Settings } from '@renderer/components/Settings'
 import { ExitConfirmation } from '@renderer/components/ExitConfirmation'
@@ -20,10 +21,19 @@ import { evaluateMathExpression, looksLikeMathExpression } from '@renderer/lib/c
 
 type AppMode = 'search' | 'exit-confirmation'
 
+const CLIPBOARD_KEYWORDS = ['clip', 'cb', 'clipboard', 'zwischenablage', 'zähler', 'bild', 'image']
+
+const showClipboardManagerOption = (search: string): boolean => {
+  const q = search.toLowerCase().trim()
+  if (!q) return true
+  return CLIPBOARD_KEYWORDS.some((kw) => q.includes(kw))
+}
+
 const App = () => {
   const [selectedCommand, setSelectedCommand] = useState<CommandT | null>(null)
   const [commandSearch, setCommandSearch] = useState('')
   const [mode, setMode] = useState<AppMode>('search')
+  const [showClipboardManager, setShowClipboardManager] = useState(false)
   const commandListRef = useRef<HTMLDivElement | null>(null)
   const [currentBangName, setCurrentBangName] = useState<string | null>(null)
 
@@ -37,6 +47,8 @@ const App = () => {
       if (mode === 'exit-confirmation') {
         setMode('search')
         setCommandSearch('')
+      } else if (showClipboardManager) {
+        setShowClipboardManager(false)
       } else {
         setCommandSearch('')
       }
@@ -72,13 +84,14 @@ const App = () => {
   const commandFilter = (value: string, search: string, keywords: string[] | undefined): number => {
     if (value && value.startsWith('sc-')) return 1
     if (value && value.startsWith('calc-')) return 1
+    if (value === 'clipboard-manager') return 1
     const extendValue = keywords?.join(' ') || ''
     const words = search.toLowerCase().split(' ')
     const found = words.every((word) => extendValue.toLowerCase().includes(word))
     return found ? 1 : 0
   }
 
-  // Handle keyboard events for exit confirmation
+  // Handle keyboard events for exit confirmation and clipboard manager back
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if (mode === 'exit-confirmation') {
@@ -86,16 +99,19 @@ const App = () => {
           e.preventDefault()
           handleConfirmExit()
         }
+      } else if (showClipboardManager && e.key === 'Escape') {
+        e.preventDefault()
+        setShowClipboardManager(false)
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [mode])
+  }, [mode, showClipboardManager])
 
   return (
     <div className="glass h-full rounded-xl relative">
-      {mode === 'search' && !selectedCommand && (
+      {mode === 'search' && !selectedCommand && !showClipboardManager && (
         <Command
           filter={commandFilter}
           loop
@@ -159,6 +175,25 @@ const App = () => {
               </CommandGroup>
             )}
 
+            {/* Clipboard Manager - when user searches for clipboard */}
+            {showClipboardManagerOption(commandSearch) && (
+              <CommandGroup heading="Tools">
+                <CommandItem
+                  onSelect={() => {
+                    setShowClipboardManager(true)
+                    setCommandSearch('')
+                  }}
+                  value="clipboard-manager"
+                  keywords={['clipboard', 'clip', 'cb', 'zwischenablage', 'history']}
+                >
+                  <div className="flex items-center gap-2">
+                    <i className="ph ph-clipboard-text text-white/60" />
+                    <span>Clipboard Manager</span>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+            )}
+
             {/* Terminal Group */}
             {isValidCommand && commandSearch.trim() && (
               <CommandGroup heading="Terminal">
@@ -206,6 +241,10 @@ const App = () => {
           setSelectedCommand={setSelectedCommand}
           setCommandSearch={setCommandSearch}
         />
+      )}
+
+      {mode === 'search' && showClipboardManager && (
+        <ClipboardPage setShowClipboardManager={setShowClipboardManager} />
       )}
 
       <ExitConfirmation

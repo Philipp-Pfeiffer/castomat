@@ -46,6 +46,21 @@ declare global {
     onInitCommandCache: (callback: (commands: string[]) => void) => void
     runInKitty: (command: string) => Promise<void>
     writeClipboard: (text: string) => Promise<void>
+    // Clipboard history
+    getClipboardHistory: (search?: string) => Promise<ClipboardEntryT[]>
+    deleteClipboardEntry: (id: string) => Promise<void>
+    pinClipboardEntry: (id: string, pinned: boolean) => Promise<void>
+    pasteClipboardEntry: (entry: ClipboardEntryT) => Promise<void>
+  }
+
+  export type ClipboardEntryT = {
+    id: string
+    text?: string
+    imageBase64?: string
+    thumbnailBase64?: string
+    timestamp: number
+    pinned: boolean
+    type: 'text' | 'image'
   }
 
   type PluginT = {

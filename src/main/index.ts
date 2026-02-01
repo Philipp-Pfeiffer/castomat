@@ -15,6 +15,11 @@ import {
   getPluginsDir,
   getPlugins,
   initCommandCache,
+  initClipboardManager,
+  getClipboardHistory,
+  deleteClipboardEntry,
+  pinClipboardEntry,
+  writeClipboardFromEntry,
   listInstalledApplications,
   openApplication,
   openExternal,
@@ -31,6 +36,7 @@ import {
   runInKitty
 } from './handlers'
 import { getInstalledApps, launchApp } from './apps'
+import type { ClipboardEntryT } from './clipboardManager'
 import { setupAutoUpdater } from './autoUpdater'
 
 let mainWindow: BrowserWindow
@@ -146,6 +152,10 @@ if (!gotTheLock) {
     await initCommandCache()
     console.log('Command cache initialized')
 
+    // Initialize clipboard manager (polls only when window not focused)
+    await initClipboardManager(mainWindow)
+    console.log('Clipboard manager initialized')
+
     ipcMain.handle('get-commands', () => {
       return getCommands()
     })
@@ -248,6 +258,22 @@ if (!gotTheLock) {
 
     ipcMain.handle('write-clipboard', async (_, text: string) => {
       clipboard.writeText(text)
+    })
+
+    ipcMain.handle('get-clipboard-history', async (_, search?: string) => {
+      return getClipboardHistory(search)
+    })
+
+    ipcMain.handle('delete-clipboard-entry', async (_, id: string) => {
+      return deleteClipboardEntry(id)
+    })
+
+    ipcMain.handle('pin-clipboard-entry', async (_, id: string, pinned: boolean) => {
+      return pinClipboardEntry(id, pinned)
+    })
+
+    ipcMain.handle('paste-clipboard-entry', async (_, entry: ClipboardEntryT) => {
+      writeClipboardFromEntry(entry)
     })
 
     ipcMain.on('show-main-window', () => {

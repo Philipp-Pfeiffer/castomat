@@ -91,6 +91,18 @@ if (process.contextIsolated) {
       },
       writeClipboard: (text: string) => {
         return ipcRenderer.invoke('write-clipboard', text)
+      },
+      getClipboardHistory: (search?: string) => {
+        return ipcRenderer.invoke('get-clipboard-history', search)
+      },
+      deleteClipboardEntry: (id: string) => {
+        return ipcRenderer.invoke('delete-clipboard-entry', id)
+      },
+      pinClipboardEntry: (id: string, pinned: boolean) => {
+        return ipcRenderer.invoke('pin-clipboard-entry', id, pinned)
+      },
+      pasteClipboardEntry: (entry) => {
+        return ipcRenderer.invoke('paste-clipboard-entry', entry)
       }
     } as ElectronAPI & ApiT)
 
