@@ -15,7 +15,8 @@ Below, you'll find a simple guide on how to create and integrate your own plugin
 4. [Plugin Structure](#plugin-structure)
 5. [Advanced Tips](#advanced-tips)
 6. [Publishing and Sharing](#publishing-and-sharing)
-7. [FAQ](#faq)
+7. [Optional system dependencies](#optional-system-dependencies)
+8. [FAQ](#faq)
 
 ## Introduction
 
@@ -34,3 +35,16 @@ A Backslash plugin is a simple module that you can add to extend Backslash's fun
 1. **Because you can**. You're a Linux user, you already solve your problems with shell scripts. Why not make them pretty with Backslash?
 2. **Automation**. If you're doing the same repetitive tasks, turn them into a plugin, and let Backslash handle it.
 3. **Sharing is caring**. Once you've built something cool, share it with the rest of the Linux community. (They might even use it!)
+
+## Optional system dependencies
+
+### Clipboard manager
+
+The built-in clipboard manager uses Electron’s clipboard API. On Linux (especially under Wayland), that API may not see the system clipboard when the app is in the background, so the history can stay empty.
+
+For reliable clipboard history on Linux, install one of these **optional** helpers:
+
+- **Wayland:** `wl-clipboard` (provides `wl-paste`). Example: `sudo pacman -S wl-clipboard` (Arch), `sudo apt install wl-clipboard` (Debian/Ubuntu).
+- **X11:** `xclip` or `xsel`. Example: `sudo pacman -S xclip`, or `sudo apt install xclip`.
+
+If none of these are installed, the app still runs; clipboard history may just be empty when the window is not focused.

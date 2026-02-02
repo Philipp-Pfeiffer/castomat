@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron'
 import { clipboard, nativeImage } from 'electron'
 import storage from 'electron-json-storage'
+import { exec } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { promisify } from 'node:util'
 
@@ -8,6 +9,16 @@ const THUMBNAIL_SIZE = { width: 80, height: 60 }
 const MAX_ENTRIES = 100
 const POLL_INTERVAL_MS = 2000
 const CLIPBOARD_STORAGE_KEY = 'clipboardHistory'
+const FALLBACK_TIMEOUT_MS = 1000
+const FALLBACK_MAX_BYTES = 512 * 1024
+const FALLBACK_MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+const execAsync = promisify(exec)
+const execAsyncBinary = (
+  cmd: string,
+  opts: { timeout: number; maxBuffer: number; env: NodeJS.ProcessEnv }
+): Promise<{ stdout: Buffer; stderr: string }> =>
+  execAsync(cmd, { ...opts, encoding: 'buffer' })
 
 export interface ClipboardEntryT {
   id: string
@@ -63,6 +74,88 @@ const hashBuffer = (buf: Buffer) => {
   return `${buf.length}-${h}`
 }
 
+/** Reject clipboard content that is clearly binary (e.g. image data mistaken as text). */
+const looksLikeBinary = (s: string): boolean => {
+  if (!s.length) return false
+  if (s.includes('\0')) return true
+  const first = s.charCodeAt(0)
+  if (s.length >= 8 && (first === 0x89 || first === 0xfffd) && s.startsWith('PNG', 1)) return true
+  if (s.length >= 4 && s.startsWith('IHDR')) return true
+  return false
+}
+
+/**
+ * Read clipboard text: use Electron first; on Linux when empty, try wl-paste (Wayland) or xclip/xsel (X11).
+ * Only requests text/plain so image data is never stored as text.
+ */
+const readClipboardTextWithLinuxFallback = async (): Promise<string> => {
+  const fromElectron = clipboard.readText()
+  if (fromElectron && fromElectron.length > 0 && !looksLikeBinary(fromElectron)) return fromElectron
+  if (process.platform !== 'linux') return ''
+
+  const opts = {
+    timeout: FALLBACK_TIMEOUT_MS,
+    maxBuffer: FALLBACK_MAX_BYTES,
+    encoding: 'utf8' as const,
+    env: process.env
+  }
+
+  const accept = (raw: string): string => {
+    const s = typeof raw === 'string' ? raw.trimEnd() : ''
+    if (!s || looksLikeBinary(s)) return ''
+    return s
+  }
+
+  if (process.env.WAYLAND_DISPLAY) {
+    try {
+      const { stdout } = await execAsync('wl-paste --no-newline --type text/plain', opts)
+      return accept(stdout)
+    } catch {
+      return ''
+    }
+  }
+
+  for (const cmd of ['xclip -selection clipboard -o -t text/plain', 'xsel -bo']) {
+    try {
+      const { stdout } = await execAsync(cmd, opts)
+      const result = accept(stdout)
+      if (result) return result
+    } catch {
+      // try next command
+    }
+  }
+  return ''
+}
+
+type NativeImageT = ReturnType<typeof nativeImage.createFromBuffer>
+
+/**
+ * Read clipboard image: use Electron first; on Linux when empty, try wl-paste --type image/png (Wayland).
+ */
+const readClipboardImageWithLinuxFallback = async (): Promise<NativeImageT | null> => {
+  const fromElectron = clipboard.readImage()
+  if (!fromElectron.isEmpty()) return fromElectron
+  if (process.platform !== 'linux' || !process.env.WAYLAND_DISPLAY) return null
+
+  const opts = {
+    timeout: FALLBACK_TIMEOUT_MS,
+    maxBuffer: FALLBACK_MAX_IMAGE_BYTES,
+    env: process.env
+  }
+
+  for (const mime of ['image/png', 'image/jpeg']) {
+    try {
+      const { stdout } = await execAsyncBinary(`wl-paste --type ${mime}`, opts)
+      if (!Buffer.isBuffer(stdout) || stdout.length === 0) continue
+      const img = nativeImage.createFromBuffer(stdout)
+      if (!img.isEmpty()) return img
+    } catch {
+      // try next type
+    }
+  }
+  return null
+}
+
 const isDuplicateText = (text: string, entries: ClipboardEntryT[]): boolean => {
   const normalized = text.trim()
   if (!normalized) return true
@@ -95,16 +188,7 @@ const pollClipboard = async () => {
       )
     }
 
-    // Only skip if window is both visible AND focused
-    // Hidden windows should still allow clipboard monitoring
-    if (mainWindowRef?.isVisible() && mainWindowRef?.isFocused()) {
-      if (pollCount % 5 === 0) {
-        console.log('[ClipboardManager] Skipping poll - window is visible and focused')
-      }
-      return
-    }
-
-    const text = clipboard.readText()
+    const text = await readClipboardTextWithLinuxFallback()
     const textHash = hashString(text)
 
     // Debug logging - show actual text content and length
@@ -139,8 +223,8 @@ const pollClipboard = async () => {
       console.log('[ClipboardManager] Text unchanged or empty')
     }
 
-    const img = clipboard.readImage()
-    if (!img.isEmpty()) {
+    const img = await readClipboardImageWithLinuxFallback()
+    if (img && !img.isEmpty()) {
       const buf = img.toPNG()
       const imgHash = hashBuffer(buf)
       if (imgHash !== lastImageHash) {

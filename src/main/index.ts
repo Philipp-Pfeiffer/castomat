@@ -69,9 +69,6 @@ const createWindow = async () => {
     return { action: 'deny' }
   })
 
-  ipcMain.on('disable-global-shortcuts', () => globalShortcut.unregisterAll())
-  ipcMain.on('enable-global-shortcuts', registerGlobalShortcut)
-
   mainWindow.on('blur', () => {
     if (!is.dev) mainWindow.hide()
   })
@@ -144,21 +141,9 @@ if (!gotTheLock) {
       optimizer.watchWindowShortcuts(window)
     })
 
-    await createWindow()
-    await registerGlobalShortcut()
-    createTray()
-
-    // Initialize command cache
-    await initCommandCache()
-    console.log('Command cache initialized')
-
-    // Initialize clipboard manager (polls only when window not focused)
-    try {
-      await initClipboardManager(mainWindow)
-      console.log('Clipboard manager initialized successfully')
-    } catch (error) {
-      console.error('Failed to initialize clipboard manager:', error)
-    }
+    // Register all IPC handlers before createWindow so renderer invokes succeed on first load
+    ipcMain.on('disable-global-shortcuts', () => globalShortcut.unregisterAll())
+    ipcMain.on('enable-global-shortcuts', registerGlobalShortcut)
 
     ipcMain.handle('get-commands', () => {
       return getCommands()
@@ -224,11 +209,8 @@ if (!gotTheLock) {
       return getHotkeys()
     })
 
-    // Terminal IPC handlers
     ipcMain.handle('get-command-cache', async () => {
-      console.log('get-command-cache handler called')
       const cache = getCommandCache()
-      console.log(`Returning ${cache.size} commands`)
       return Array.from(cache)
     })
 
@@ -291,6 +273,22 @@ if (!gotTheLock) {
     ipcMain.on('reload-app', () => {
       if (mainWindow) mainWindow.reload()
     })
+
+    await createWindow()
+    await registerGlobalShortcut()
+    createTray()
+
+    // Initialize command cache
+    await initCommandCache()
+    console.log('Command cache initialized')
+
+    // Initialize clipboard manager (polls only when window not focused)
+    try {
+      await initClipboardManager(mainWindow)
+      console.log('Clipboard manager initialized successfully')
+    } catch (error) {
+      console.error('Failed to initialize clipboard manager:', error)
+    }
 
     // Send command cache to renderer when window is ready
     mainWindow?.webContents.on('did-finish-load', () => {
