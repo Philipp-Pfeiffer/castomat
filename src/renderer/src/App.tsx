@@ -110,7 +110,7 @@ const App = () => {
   }, [mode, showClipboardManager])
 
   return (
-    <div className="glass h-full rounded-xl relative">
+    <div className="glass-strong h-full relative animate-glass">
       {mode === 'search' && !selectedCommand && !showClipboardManager && (
         <Command
           filter={commandFilter}
@@ -123,7 +123,7 @@ const App = () => {
                 : undefined
           }
         >
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-glass">
+          <div className="flex items-center gap-2 px-5 py-4 glass-divider">
             <CommandInput
               autoFocus
               value={commandSearch}
@@ -132,7 +132,7 @@ const App = () => {
               placeholder="Search commands..."
             />
             {currentBangName && (
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-white/10 text-white/87 text-xs font-medium border border-white/10 glass-hover">
+              <span className="ml-2 px-2.5 py-1 rounded-full bg-white/8 text-white/90 text-xs font-medium border border-white/8 glass-hover">
                 {currentBangName}
               </span>
             )}
@@ -218,7 +218,7 @@ const App = () => {
           </CommandList>
 
           <Footer>
-            <span className="flex items-center gap-2 text-xs text-white/60">
+            <span className="flex items-center gap-2 text-xs text-white/55">
               {showCalculator && hasValidCalcResult ? (
                 <>
                   Copy result

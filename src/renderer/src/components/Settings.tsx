@@ -164,21 +164,21 @@ export const Settings = () => {
                           return (
                             <div
                               key={plugin.name}
-                              className="flex items-center justify-between rounded-md border p-2 hover:bg-accent/50 transition-colors"
+                              className="flex items-center justify-between rounded-xl border border-white/8 p-2.5 hover:bg-white/5 transition-colors"
                             >
                               <div className="flex flex-col gap-0.5">
                                 <div className="font-medium text-foreground text-sm">
                                   {plugin.label}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-white/35">
                                   v{plugin.version} • by {plugin.author}
                                 </div>
                               </div>
                               <button
-                                className={`ml-4 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 shadow-sm border ${
+                                className={`ml-4 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 shadow-sm border ${
                                   isDisabled
-                                    ? 'bg-emerald-900/10 text-emerald-600 border-emerald-800/20 hover:bg-emerald-900/20 hover:border-emerald-800/30 hover:shadow-md'
-                                    : 'bg-red-900/10 text-red-600 border-red-800/20 hover:bg-red-900/20 hover:border-red-800/30 hover:shadow-md'
+                                    ? 'bg-emerald-900/10 text-emerald-500 border-emerald-800/20 hover:bg-emerald-900/20 hover:border-emerald-800/30'
+                                    : 'bg-red-900/10 text-red-500 border-red-800/20 hover:bg-red-900/20 hover:border-red-800/30'
                                 }`}
                                 onClick={() => handleDisablePluginChange(plugin, !isDisabled)}
                               >

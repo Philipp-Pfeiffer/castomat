@@ -52,9 +52,9 @@ export const Commands = ({ commandSearch, setSelectedCommand }: CommandsProps) =
                 <i className={`ph ph-${command.icon} text-sm`} />
               </div>
               <span>{command.label}</span>
-              <span className="text-xs text-white/40">{command.plugin.label}</span>
+              <span className="text-xs text-white/35">{command.plugin.label}</span>
             </div>
-            <span className="text-xs text-white/40">Command</span>
+            <span className="text-xs text-white/35">Command</span>
           </div>
         </CommandItem>
       ))}
